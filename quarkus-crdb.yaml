@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quarkus-crdb-lb
+spec:
+  selector:
+    app.kubernetes.io/name: quarkus-crdb
+  ports:
+  - protocol: "TCP"
+    port: 80
+    targetPort: 9090
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: quarkus-crdb
+  name: quarkus-crdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: quarkus-crdb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: quarkus-crdb
+    spec:
+      containers:
+        - name: quarkus-crdb
+          image: mgoddard/quarkus-crdb:1.0
+          imagePullPolicy: Always
+          volumeMounts:
+          - mountPath: "/var/certs"
+            name: cc-ca
+            readOnly: true
+          ports:
+          - containerPort: 9090
+          env:
+            - name: JDBC_URL
+              value: "jdbc:postgresql://free-tier.gcp-us-central1.cockroachlabs.cloud:26257/mgoddard-eta-1966.defaultdb?sslmode=verify-full&sslrootcert=/var/certs/cc-ca.crt"
+            - name: PGUSER
+              value: "michael"
+            - name: PGPASSWORD
+              value: "nEOPc6dC1DsVg6Xp"
+            - name: HTTP_PORT 
+              value: "9090"
+      restartPolicy: Always 
+      volumes:
+        - name: cc-ca
+          secret:
+            secretName: cc-ca
+
