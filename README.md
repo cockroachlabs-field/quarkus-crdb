@@ -1,6 +1,6 @@
 # Demo: Securely connect a Quarkus Java app to your CockroachCloud Free Tier database
 
-[Quarkus](https://quarkus.io) is a full-stack, Kubernetes-native, Java
+[Quarkus](https://quarkus.io) is a full stack, Kubernetes (_K8s_) native, Java
 Application Framework. You can use it to build an _uber JAR_ containing your
 application, along with its dependent JAR files, for easy deployment. It seems
 similar to Spring Boot in some ways.
@@ -74,4 +74,21 @@ control under _Regions_.  You can also choose a _Cluster Name_.
 
 ![Connection info dialog](./CC_connection_UI.png)
 
+## Create a K8s secret containing the CockroachCloud server certificate
+
+Per [this reference](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/),
+_A Secret can contain user credentials required by pods to access a database_, so secrets will enable
+our app to access the `cc-ca.crt` file which we need in order to run in `verify-full` mode.
+
+Here's the process:
+
+```
+$ mkdir certs
+$ cp ~/Downloads/cc-ca.crt ./certs
+$ kubectl create secret generic cc-ca --from-file=./certs/cc-ca.crt
+$ kubectl get secrets
+NAME                  TYPE                                  DATA   AGE
+cc-ca                 Opaque                                1      37s
+default-token-4pvcq   kubernetes.io/service-account-token   3      4h51m
+```
 
