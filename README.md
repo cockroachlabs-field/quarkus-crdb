@@ -78,7 +78,8 @@ control under _Regions_.  You can also choose a _Cluster Name_.
 
 Per [this reference](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/),
 _A Secret can contain user credentials required by pods to access a database_, so secrets will enable
-our app to access the `cc-ca.crt` file which we need in order to run in `verify-full` mode.
+our app to access the `cc-ca.crt` file which we need in order to run in `verify-full` mode.  This secret
+is referenced by your deployment manifest and will be accessible at `/var/certs/cc-ca.crt` in the K8s pod.
 
 Here's the process:
 
@@ -91,4 +92,84 @@ NAME                  TYPE                                  DATA   AGE
 cc-ca                 Opaque                                1      37s
 default-token-4pvcq   kubernetes.io/service-account-token   3      4h51m
 ```
+
+## Edit the app's deployment manifest (YAML) and deploy the app
+
+In a previous step, you copied your CockroachCloud connection string (and saved it).
+This is the form of the connection string:
+
+```
+cockroach sql --url 'postgres://michael:36W2e23Nxg9JdKkw@free-tier.gcp-us-central1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full&sslrootcert=<your_certs_directory>/cc-ca.crt&options=--cluster=quarkus-demo-1975'
+```
+
+Use the values embedded within the `'postgres://...` string to fill in the `quarkus-crdb.yaml` file,
+mapping them as follows:
+
+```
+- name: JDBC_URL
+  value: "jdbc:postgresql://free-tier.gcp-us-central1.cockroachlabs.cloud:26257/quarkus-demo-1975.defaultdb?sslmode=verify-full&sslrootcert=/var/certs/cc-ca.crt"
+- name: PGUSER
+  value: "michael"
+- name: PGPASSWORD
+  value: "36W2e23Nxg9JdKkw"
+```
+
+(The database name is that part after `--cluster=` plus `.defaultdb`)
+
+* Save this YAML file
+* Deploy the app:
+```
+$ kubectl apply -f quarkus-crdb.yaml
+```
+* Check the status of the app:
+```
+$ kubectl get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+quarkus-crdb-67b67c48ff-4v5kx   1/1     Running   0          49s
+```
+* And get the `EXTERNAL-IP` of the app's LoadBalancer (here, `35.245.163.14`):
+```
+$ kubectl get services
+NAME              TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)        AGE
+kubernetes        ClusterIP      10.99.240.1     <none>          443/TCP        5h11m
+quarkus-crdb-lb   LoadBalancer   10.99.241.187   35.245.163.14   80:30750/TCP   5h9m
+```
+
+## Test the app
+
+Prior to running the last part of this, you will need to have downloaded and installed the `cockroach` binary
+for your platform, which is available from [the releases page](https://www.cockroachlabs.com/docs/releases/).
+
+```
+$ export LB_EXT_IP="35.245.163.14"
+$ ./test.sh
+```
+
+`test.sh` uses Curl to POST data to the app endpoint for creating a user.  This data should now be visible
+via a SQL client:
+
+```
+$ cockroach sql --url 'postgres://michael:36W2e23Nxg9JdKkw@free-tier.gcp-us-central1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full&sslrootcert=./certs/cc-ca.crt&options=--cluster=quarkus-demo-1975'             
+#
+# Welcome to the CockroachDB SQL shell.
+# All statements must be terminated by a semicolon.
+# To exit, type: \q.
+#
+# Server version: CockroachDB CCL v20.2.8 (x86_64-unknown-linux-gnu, built 2021/04/23 13:54:57, go1.13.14) (same version as client)
+# Cluster ID: c0854300-2c35-44b4-a7d1-2af71acd3e4c
+#
+# Enter \? for a brief introduction.
+#
+michael@free-tier.gcp-us-central1.cockroachlabs.cloud:26257/defaultdb> select * from users;
+  id |      email       | password | username
+-----+------------------+----------+-----------
+   1 | test@example.org | secret   | test
+(1 row)
+
+Time: 45ms total (execution 1ms / network 43ms)
+
+```
+
+If you can see the row of data in the `users` table, you've successfully run the demo.
+Thank you for working through it with me!
 

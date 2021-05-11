@@ -40,11 +40,11 @@ spec:
           - containerPort: 9090
           env:
             - name: JDBC_URL
-              value: "jdbc:postgresql://free-tier.gcp-us-central1.cockroachlabs.cloud:26257/mgoddard-eta-1966.defaultdb?sslmode=verify-full&sslrootcert=/var/certs/cc-ca.crt"
+              value: "jdbc:postgresql://free-tier.gcp-us-central1.cockroachlabs.cloud:26257/quarkus-demo-1975.defaultdb?sslmode=verify-full&sslrootcert=/var/certs/cc-ca.crt"
             - name: PGUSER
               value: "michael"
             - name: PGPASSWORD
-              value: "nEOPc6dC1DsVg6Xp"
+              value: "36W2e23Nxg9JdKkw"
             - name: HTTP_PORT 
               value: "9090"
       restartPolicy: Always 
